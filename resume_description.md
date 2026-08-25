@@ -1,0 +1,4 @@
+•	Identified the need for students to get instant, accurate answers from lengthy DSA study materials; built a full-stack Retrieval-Augmented Generation (RAG) conversational agent using Flask, enabling context-grounded Q&A with zero manual document lookup.
+•	Designed and implemented a semantic search pipeline using the all-MiniLM-L6-v2 model (384-dimensional vectors) and Chroma DB, reducing irrelevant retrievals by surfacing the top 5 most contextually relevant document chunks per query.
+•	Integrated a 780-million parameter Hugging Face model (google/flan-t5-large) via LangChain to synthesize retrieved context into concise, hallucination-free responses capped at 300 tokens, significantly improving answer accuracy over the baseline 80M-parameter model.
+•	Tech: Python, LangChain, Chroma DB, Hugging Face Transformers, Sentence Transformers, Flask, HTML5, CSS3, JavaScript.

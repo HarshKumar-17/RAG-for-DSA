@@ -1,0 +1,5 @@
+venv/
+__pycache__/
+.env
+rag_logs.json
+db/chroma_db/
