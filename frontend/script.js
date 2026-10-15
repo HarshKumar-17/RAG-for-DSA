@@ -74,10 +74,15 @@ async function sendMessage(){
         
         const data = await response.json();
         removeTyping();
-        addMessage(data.response, "bot");
+
+        if (!response.ok) {
+            addMessage(`⚠️ ${data.response || "Server error occurred (" + response.status + ")"}`, "bot");
+        } else {
+            addMessage(data.response, "bot");
+        }
     } catch(err) {
         removeTyping();
-        addMessage("⚠️ Error connecting to server", "bot");
+        addMessage(`⚠️ Connection error: ${err.message || "Failed to reach server"}`, "bot");
     }
 }
 
