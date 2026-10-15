@@ -19,19 +19,16 @@ load_dotenv()
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 persistent_directory = os.path.join(BASE_DIR, "db", "chroma_db")
 
-# ChromaDB's default embedding function is ONNXMiniLM_L6_V2
-# — same all-MiniLM-L6-v2 model used during ingestion, but runs
-#   on onnxruntime (~60 MB) instead of torch (~2 GB)
-chroma_client = chromadb.PersistentClient(path=persistent_directory)
-collection = chroma_client.get_or_create_collection(name="langchain")
+_chroma_client = None
+_collection = None
 
-# Pre-warm the embedding model at boot so user queries never trigger a cold-start download timeout
-try:
-    print("Warming up embedding model...")
-    collection.query(query_texts=["warmup"], n_results=1)
-    print("Embedding model ready.")
-except Exception as e:
-    print(f"Warning during embedding warmup: {e}")
+def get_collection():
+    global _chroma_client, _collection
+    if _collection is None:
+        if _chroma_client is None:
+            _chroma_client = chromadb.PersistentClient(path=persistent_directory)
+        _collection = _chroma_client.get_or_create_collection(name="langchain")
+    return _collection
 
 # -----------------------------
 # LLM Client (Groq Free Tier with OpenAI fallback)
@@ -198,6 +195,7 @@ Rewritten query:
         search_question = user_question
 
     # Retrieve documents using chromadb directly
+    collection = get_collection()
     results = collection.query(
         query_texts=[search_question],
         n_results=5
