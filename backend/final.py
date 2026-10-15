@@ -25,6 +25,14 @@ persistent_directory = os.path.join(BASE_DIR, "db", "chroma_db")
 chroma_client = chromadb.PersistentClient(path=persistent_directory)
 collection = chroma_client.get_or_create_collection(name="langchain")
 
+# Pre-warm the embedding model at boot so user queries never trigger a cold-start download timeout
+try:
+    print("Warming up embedding model...")
+    collection.query(query_texts=["warmup"], n_results=1)
+    print("Embedding model ready.")
+except Exception as e:
+    print(f"Warning during embedding warmup: {e}")
+
 # -----------------------------
 # LLM Client (Groq Free Tier with OpenAI fallback)
 # -----------------------------
