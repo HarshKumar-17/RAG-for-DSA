@@ -30,7 +30,7 @@ collection = chroma_client.get_or_create_collection(name="langchain")
 # -----------------------------
 
 _client = None
-_model_name = "llama-3.1-8b-instant"
+_model_name = "qwen/qwen3.8-27b"
 
 def get_llm_client():
     global _client, _model_name
@@ -39,12 +39,12 @@ def get_llm_client():
         openai_api_key = os.getenv("OPENAI_API_KEY")
 
         if groq_api_key:
-            # Groq provides free, extremely fast Llama models via OpenAI-compatible endpoints
             _client = OpenAI(
                 base_url="https://api.groq.com/openai/v1",
                 api_key=groq_api_key
             )
-            _model_name = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")
+            # Default to qwen/qwen3.8-27b or openai/gpt-oss-120b on Groq
+            _model_name = os.getenv("GROQ_MODEL", "qwen/qwen3.8-27b")
         elif openai_api_key:
             _client = OpenAI(api_key=openai_api_key)
             _model_name = os.getenv("OPENAI_MODEL", "gpt-3.5-turbo")
