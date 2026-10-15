@@ -2,9 +2,10 @@ from dotenv import load_dotenv
 from langchain_chroma import Chroma
 from langchain_core.messages import HumanMessage, AIMessage
 from langchain_huggingface import HuggingFaceEmbeddings
-from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
+from openai import OpenAI
 import json
 import re
+import os
 from datetime import datetime
 
 # Load environment variables
@@ -14,7 +15,9 @@ load_dotenv()
 # Vector DB connection
 # -----------------------------
 
-persistent_directory = "db/chroma_db"
+# Use path relative to this file so it works from any working directory
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+persistent_directory = os.path.join(BASE_DIR, "db", "chroma_db")
 
 embeddings = HuggingFaceEmbeddings(
     model_name="sentence-transformers/all-MiniLM-L6-v2"
@@ -26,17 +29,19 @@ db = Chroma(
 )
 
 # -----------------------------
-# Local LLM (Upgraded for Accuracy)
+# OpenAI Client
 # -----------------------------
 
-print("Loading local flan-t5-large model (this may take a moment)...")
-tokenizer = AutoTokenizer.from_pretrained("google/flan-t5-large")
-hf_model = AutoModelForSeq2SeqLM.from_pretrained("google/flan-t5-large")
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 def generate_text(prompt):
-    inputs = tokenizer(prompt, return_tensors="pt")
-    outputs = hf_model.generate(**inputs, max_new_tokens=300)
-    return tokenizer.decode(outputs[0], skip_special_tokens=True)
+    response = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[{"role": "user", "content": prompt}],
+        max_tokens=300,
+        temperature=0.3
+    )
+    return response.choices[0].message.content
 
 # -----------------------------
 # Chat memory
@@ -74,6 +79,8 @@ def validate_and_format_answer(answer):
 # Logging interactions
 # -----------------------------
 
+LOG_FILE = os.path.join(BASE_DIR, "rag_logs.json")
+
 def log_interaction(question, search_question, docs, answer, validation):
 
     log_entry = {
@@ -88,14 +95,14 @@ def log_interaction(question, search_question, docs, answer, validation):
     }
 
     try:
-        with open("rag_logs.json", "r") as f:
+        with open(LOG_FILE, "r") as f:
             data = json.load(f)
     except:
         data = []
 
     data.append(log_entry)
 
-    with open("rag_logs.json", "w") as f:
+    with open(LOG_FILE, "w") as f:
         json.dump(data, f, indent=4)
 
 
@@ -106,7 +113,7 @@ def log_interaction(question, search_question, docs, answer, validation):
 def show_analytics():
 
     try:
-        with open("rag_logs.json", "r") as f:
+        with open(LOG_FILE, "r") as f:
             data = json.load(f)
     except:
         print("No logs available yet.")
