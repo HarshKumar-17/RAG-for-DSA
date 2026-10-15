@@ -38,6 +38,8 @@ def chat():
         answer = ask_question(message)
         return jsonify({"response": answer})
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return jsonify({"response": f"Error: {str(e)}"}), 500
 
 
