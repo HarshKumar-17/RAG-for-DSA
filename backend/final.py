@@ -1,8 +1,7 @@
 from dotenv import load_dotenv
-from langchain_chroma import Chroma
 from langchain_core.messages import HumanMessage, AIMessage
-from langchain_huggingface import HuggingFaceEmbeddings
 from openai import OpenAI
+import chromadb
 import json
 import re
 import os
@@ -12,21 +11,17 @@ from datetime import datetime
 load_dotenv()
 
 # -----------------------------
-# Vector DB connection
+# Vector DB connection (native chromadb — no torch needed)
 # -----------------------------
 
-# Use path relative to this file so it works from any working directory
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 persistent_directory = os.path.join(BASE_DIR, "db", "chroma_db")
 
-embeddings = HuggingFaceEmbeddings(
-    model_name="sentence-transformers/all-MiniLM-L6-v2"
-)
-
-db = Chroma(
-    persist_directory=persistent_directory,
-    embedding_function=embeddings
-)
+# ChromaDB's default embedding function is ONNXMiniLM_L6_V2
+# — same all-MiniLM-L6-v2 model used during ingestion, but runs
+#   on onnxruntime (~60 MB) instead of torch (~2 GB)
+chroma_client = chromadb.PersistentClient(path=persistent_directory)
+collection = chroma_client.get_or_create_collection(name="langchain")
 
 # -----------------------------
 # OpenAI Client
@@ -81,15 +76,13 @@ def validate_and_format_answer(answer):
 
 LOG_FILE = os.path.join(BASE_DIR, "rag_logs.json")
 
-def log_interaction(question, search_question, docs, answer, validation):
+def log_interaction(question, search_question, sources, answer, validation):
 
     log_entry = {
         "timestamp": datetime.now().isoformat(),
         "user_question": question,
         "search_query": search_question,
-        "retrieved_sources": [
-            doc.metadata.get("source", "Unknown") for doc in docs
-        ],
+        "retrieved_sources": sources,
         "answer": answer,
         "validation": validation
     }
@@ -169,17 +162,18 @@ Rewritten query:
     else:
         search_question = user_question
 
-    # Retrieve documents
-    retriever = db.as_retriever(
-        search_type="mmr",
-        search_kwargs={"k": 5}
+    # Retrieve documents using chromadb directly
+    results = collection.query(
+        query_texts=[search_question],
+        n_results=5
     )
 
-    docs = retriever.invoke(search_question)
+    docs = results["documents"][0]
+    metadatas = results["metadatas"][0]
 
     print(f"Found {len(docs)} relevant documents")
 
-    docs_text = "\n\n".join([doc.page_content[:800] for doc in docs])
+    docs_text = "\n\n".join([doc[:800] for doc in docs])
 
     # Prompt for answer generation
     prompt = f"""
@@ -207,7 +201,9 @@ Give a clear and concise explanation:
     for item in validation:
         print("-", item)
 
-    log_interaction(user_question, search_question, docs, answer, validation)
+    # Extract source names from metadata
+    sources = [m.get("source", "Unknown") for m in metadatas]
+    log_interaction(user_question, search_question, sources, answer, validation)
 
     # Update chat history
     chat_history.append(HumanMessage(content=user_question))
