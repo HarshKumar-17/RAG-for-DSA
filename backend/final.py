@@ -8,6 +8,8 @@ import os
 from datetime import datetime
 
 # Load environment variables
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+load_dotenv(os.path.join(BASE_DIR, ".env"))
 load_dotenv()
 
 # -----------------------------
