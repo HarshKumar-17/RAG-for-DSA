@@ -72,13 +72,23 @@ async function sendMessage(){
             body:JSON.stringify({message:message})
         });
         
-        const data = await response.json();
         removeTyping();
 
+        let data;
+        const text = await response.text();
+        try {
+            data = JSON.parse(text);
+        } catch(e) {
+            data = null;
+        }
+
         if (!response.ok) {
-            addMessage(`⚠️ ${data.response || "Server error occurred (" + response.status + ")"}`, "bot");
-        } else {
+            const errDetail = (data && data.response) ? data.response : (text.slice(0, 150) || `HTTP error ${response.status}`);
+            addMessage(`⚠️ ${errDetail}`, "bot");
+        } else if (data && data.response) {
             addMessage(data.response, "bot");
+        } else {
+            addMessage(text || "No response received.", "bot");
         }
     } catch(err) {
         removeTyping();
