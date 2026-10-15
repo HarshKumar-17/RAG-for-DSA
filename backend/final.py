@@ -7,6 +7,15 @@ import re
 import os
 from datetime import datetime
 
+import os
+# Cap threads to 1 to prevent CPU starvation and worker lockups on Render's 1-vCPU container
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
+os.environ["NUMEXPR_NUM_THREADS"] = "1"
+os.environ["ANONYMIZED_TELEMETRY"] = "False"
+
 # Load environment variables
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 load_dotenv(os.path.join(BASE_DIR, ".env"))
@@ -22,11 +31,16 @@ persistent_directory = os.path.join(BASE_DIR, "db", "chroma_db")
 _chroma_client = None
 _collection = None
 
+from chromadb.config import Settings
+
 def get_collection():
     global _chroma_client, _collection
     if _collection is None:
         if _chroma_client is None:
-            _chroma_client = chromadb.PersistentClient(path=persistent_directory)
+            _chroma_client = chromadb.PersistentClient(
+                path=persistent_directory,
+                settings=Settings(anonymized_telemetry=False, is_persistent=True)
+            )
         _collection = _chroma_client.get_or_create_collection(name="langchain")
     return _collection
 
@@ -120,15 +134,18 @@ def log_interaction(question, search_question, sources, answer, validation):
     }
 
     try:
-        with open(LOG_FILE, "r") as f:
+        with open(LOG_FILE, "r", encoding="utf-8") as f:
             data = json.load(f)
     except:
         data = []
 
     data.append(log_entry)
 
-    with open(LOG_FILE, "w") as f:
-        json.dump(data, f, indent=4)
+    try:
+        with open(LOG_FILE, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=4, ensure_ascii=False)
+    except Exception as e:
+        print(f"Log write warning: {e}")
 
 
 # -----------------------------
@@ -244,7 +261,10 @@ Give a clear and concise explanation:
 
     chat_history[:] = chat_history[-6:]
 
-    print("\nAnswer:\n", answer)
+    try:
+        print("\nAnswer:\n", answer)
+    except Exception:
+        pass
 
     return answer
 
