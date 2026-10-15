@@ -26,24 +26,39 @@ chroma_client = chromadb.PersistentClient(path=persistent_directory)
 collection = chroma_client.get_or_create_collection(name="langchain")
 
 # -----------------------------
-# OpenAI Client (Lazy initialization)
+# LLM Client (Groq Free Tier with OpenAI fallback)
 # -----------------------------
 
 _client = None
+_model_name = "llama-3.1-8b-instant"
 
-def get_openai_client():
-    global _client
+def get_llm_client():
+    global _client, _model_name
     if _client is None:
-        api_key = os.getenv("OPENAI_API_KEY")
-        if not api_key:
-            raise ValueError("OPENAI_API_KEY environment variable is not set. Please configure it in your Render dashboard under Environment.")
-        _client = OpenAI(api_key=api_key)
-    return _client
+        groq_api_key = os.getenv("GROQ_API_KEY")
+        openai_api_key = os.getenv("OPENAI_API_KEY")
+
+        if groq_api_key:
+            # Groq provides free, extremely fast Llama models via OpenAI-compatible endpoints
+            _client = OpenAI(
+                base_url="https://api.groq.com/openai/v1",
+                api_key=groq_api_key
+            )
+            _model_name = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")
+        elif openai_api_key:
+            _client = OpenAI(api_key=openai_api_key)
+            _model_name = os.getenv("OPENAI_MODEL", "gpt-3.5-turbo")
+        else:
+            raise ValueError(
+                "Neither GROQ_API_KEY nor OPENAI_API_KEY is set. "
+                "Get a free API key at https://console.groq.com and set GROQ_API_KEY in Render/environment."
+            )
+    return _client, _model_name
 
 def generate_text(prompt):
-    client = get_openai_client()
+    client, model = get_llm_client()
     response = client.chat.completions.create(
-        model="gpt-3.5-turbo",
+        model=model,
         messages=[{"role": "user", "content": prompt}],
         max_tokens=300,
         temperature=0.3
