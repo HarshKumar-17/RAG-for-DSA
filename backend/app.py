@@ -28,13 +28,17 @@ def static_files(filename):
 
 @app.route("/chat", methods=["POST"])
 def chat():
-
-    data = request.json
+    data = request.json or {}
     message = data.get("message")
 
-    answer = ask_question(message)
+    if not message:
+        return jsonify({"response": "Please enter a question."}), 400
 
-    return jsonify({"response": answer})
+    try:
+        answer = ask_question(message)
+        return jsonify({"response": answer})
+    except Exception as e:
+        return jsonify({"response": f"Error: {str(e)}"}), 500
 
 
 # -----------------------------

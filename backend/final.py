@@ -24,12 +24,22 @@ chroma_client = chromadb.PersistentClient(path=persistent_directory)
 collection = chroma_client.get_or_create_collection(name="langchain")
 
 # -----------------------------
-# OpenAI Client
+# OpenAI Client (Lazy initialization)
 # -----------------------------
 
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+_client = None
+
+def get_openai_client():
+    global _client
+    if _client is None:
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            raise ValueError("OPENAI_API_KEY environment variable is not set. Please configure it in your Render dashboard under Environment.")
+        _client = OpenAI(api_key=api_key)
+    return _client
 
 def generate_text(prompt):
+    client = get_openai_client()
     response = client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=[{"role": "user", "content": prompt}],
