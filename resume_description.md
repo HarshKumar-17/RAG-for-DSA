@@ -1,4 +1,7 @@
-•	Identified the need for students to get instant, accurate answers from lengthy DSA study materials; built a full-stack Retrieval-Augmented Generation (RAG) conversational agent using Flask, enabling context-grounded Q&A with zero manual document lookup.
-•	Designed and implemented a semantic search pipeline using the all-MiniLM-L6-v2 model (384-dimensional vectors) and Chroma DB, reducing irrelevant retrievals by surfacing the top 5 most contextually relevant document chunks per query.
-•	Integrated a 780-million parameter Hugging Face model (google/flan-t5-large) via LangChain to synthesize retrieved context into concise, hallucination-free responses capped at 300 tokens, significantly improving answer accuracy over the baseline 80M-parameter model.
-•	Tech: Python, LangChain, Chroma DB, Hugging Face Transformers, Sentence Transformers, Flask, HTML5, CSS3, JavaScript.
+• Built an end-to-end full-stack Retrieval-Augmented Generation (RAG) assistant using Flask, ChromaDB, and LangChain, enabling context-grounded Q&A over complex Data Structures and Algorithms material with zero manual lookup.
+• Architected a low-latency semantic search pipeline leveraging 384-dimensional all-MiniLM-L6-v2 ONNX embeddings and ChromaDB vector store, surfacing the top 5 most relevant document chunks per query under 50ms.
+• Integrated multi-turn conversation memory with dynamic query reformulation, adapting follow-up user questions into standalone vector search queries for improved retrieval recall.
+• Switched LLM inference to Groq (Llama 3.1 8B) with OpenAI fallback, achieving sub-second response latency while slashing operational costs to 100% free tier.
+• Automated time-complexity checks (O(n), O(log n)) and code syntax verification in response validation filters; logged end-to-end telemetry for conversational analytics.
+• Packaged and deployed a production-ready application to Render with Gunicorn, trimming dependency footprint from 2.5 GB (PyTorch/Transformers) down to < 100 MB for zero-OOM free-tier hosting.
+• Tech: Python, Flask, LangChain, ChromaDB, Groq Cloud API, OpenAI API, Gunicorn, HTML5, CSS3, JavaScript, Git.
